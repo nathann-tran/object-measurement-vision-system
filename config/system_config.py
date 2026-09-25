@@ -17,7 +17,7 @@ class CameraConfig:
     image_width_px: int = 2472
     image_height_px: int = 2062
     focal_length_mm: float = 8.0
-    working_distance_mm: float = 397.0
+    working_distance_mm: float = 325.0
     sensor_width_mm: float = 6.773
     sensor_height_mm: float = 5.650
     pixel_size_um: float = 2.74
@@ -44,6 +44,14 @@ class NailGroundTruth:
     large_mm: float = 55.0
 
 
+@dataclass(frozen=True)
+class DemoConfig:
+    """Presets for interactive accuracy reporting during the live demo."""
+
+    ground_truth_presets_mm: tuple[float, ...] = (19.0, 24.0, 39.0, 59.0)
+    condition_presets: tuple[str, ...] = ("normal", "ring_light", "dim")
+
+
 @dataclass
 class CalibrationConfig:
     """Pixel-to-millimeter calibration setting.
@@ -51,8 +59,8 @@ class CalibrationConfig:
     ``mm_per_pixel`` is derived from the camera projection model (see
     ``docs/projection-note.md``). When left as ``None`` it is filled from the
     active :class:`CameraConfig` in :meth:`SystemConfig.__post_init__`. Set it
-    explicitly to override the projection scale with an empirical value obtained
-    from a known reference object (see ``src.calibration.calculate_scale``).
+    explicitly to override the projection scale with an empirical value measured
+    from a known reference object.
     """
 
     mm_per_pixel: Optional[float] = None
@@ -88,6 +96,7 @@ class SystemConfig:
     ground_truth: NailGroundTruth = field(default_factory=NailGroundTruth)
     calibration: CalibrationConfig = field(default_factory=CalibrationConfig)
     segmentation: SegmentationConfig = field(default_factory=SegmentationConfig)
+    demo: DemoConfig = field(default_factory=DemoConfig)
 
     def __post_init__(self) -> None:
         if self.calibration.mm_per_pixel is None:

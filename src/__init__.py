@@ -20,15 +20,9 @@ _EXPORTS = {
     "measure_nail": "measurement",
     "NailMeasurement": "measurement",
     # calibration
+    "default_mm_per_pixel": "calibration",
     "pixels_to_mm": "calibration",
-    "mm_to_pixels": "calibration",
-    "calculate_scale": "calibration",
-    "PixelCalibration": "calibration",
     # projection
-    "pinhole_project": "projection",
-    "projected_size_mm": "projection",
-    "sensor_mm_to_px": "projection",
-    "projected_size_px": "projection",
     "mm_per_pixel": "projection",
     "mm_per_pixel_from_camera": "projection",
     # visualization
@@ -39,6 +33,11 @@ _EXPORTS = {
     "MeasurementPipeline": "pipeline",
     "MeasurementResult": "pipeline",
     "SceneResult": "pipeline",
+    # live_view
+    "FrameSource": "live_view",
+    "run_live_view": "live_view",
+    # accuracy_log
+    "AccuracyLog": "accuracy_log",
 }
 
 __all__ = list(_EXPORTS)

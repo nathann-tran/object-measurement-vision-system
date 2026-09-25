@@ -1,46 +1,22 @@
-"""Tests for the camera projection utilities and projection-derived calibration."""
+"""Tests for the projection-derived calibration scale."""
 
 import unittest
 
 from config.system_config import default_config
-from src.projection import (
-    mm_per_pixel,
-    mm_per_pixel_from_camera,
-    pinhole_project,
-    projected_size_mm,
-    projected_size_px,
-    sensor_mm_to_px,
-)
+from src.projection import mm_per_pixel, mm_per_pixel_from_camera
 
 
 class TestProjection(unittest.TestCase):
-    def test_pinhole_projection(self):
-        x_px, y_px = pinhole_project(10.0, 5.0, 100.0, focal_length_mm=50.0)
-        self.assertAlmostEqual(x_px, 5.0)
-        self.assertAlmostEqual(y_px, 2.5)
+    def test_mm_per_pixel_formula(self):
+        # mm_per_pixel = distance * sensor_mm / (f * sensor_px)
+        expected = 397.0 * 5.650 / (8.0 * 2062)
+        self.assertAlmostEqual(mm_per_pixel(397.0, 8.0, 5.650, 2062), expected, places=12)
 
-    def test_pinhole_rejects_behind_camera(self):
+    def test_mm_per_pixel_rejects_bad_inputs(self):
         with self.assertRaises(ValueError):
-            pinhole_project(1.0, 1.0, 0.0, focal_length_mm=50.0)
-
-    def test_projected_size_mm(self):
-        # f=50, real 10 mm at 100 mm -> 5 mm on sensor
-        self.assertAlmostEqual(projected_size_mm(10.0, 100.0, 50.0), 5.0)
-
-    def test_sensor_mm_to_px(self):
-        # 18 mm on a 36 mm sensor at 1920 px -> 960 px
-        self.assertAlmostEqual(sensor_mm_to_px(18.0, 36.0, 1920.0), 960.0)
-
-    def test_projected_size_px_composition(self):
-        composed = projected_size_px(10.0, 100.0, 50.0, 36.0, 1920.0)
-        manual = sensor_mm_to_px(projected_size_mm(10.0, 100.0, 50.0), 36.0, 1920.0)
-        self.assertAlmostEqual(composed, manual)
-
-    def test_mm_per_pixel_inverts_projection(self):
-        # A 1 mm object should span mm_per_pixel pixels.
-        scale = mm_per_pixel(397.0, 8.0, 5.650, 2062)
-        projected = projected_size_px(1.0, 397.0, 8.0, 5.650, 2062)
-        self.assertAlmostEqual(projected, 1.0 / scale)
+            mm_per_pixel(397.0, 0.0, 5.650, 2062)
+        with self.assertRaises(ValueError):
+            mm_per_pixel(397.0, 8.0, 5.650, 0)
 
 
 class TestProjectionCalibration(unittest.TestCase):

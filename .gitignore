@@ -39,3 +39,4 @@ ENV/
 # Experiment outputs (keep dataset directories tracked if desired)
 data/results/
 docs/
+data/

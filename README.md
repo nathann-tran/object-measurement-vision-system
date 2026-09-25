@@ -93,9 +93,9 @@ For our optical setup (working distance $397$ mm, lens focal length $8.0$ mm,
 sensor $6.773 \times 5.650$ mm, resolution $2472 \times 2062$, pixel pitch
 $2.74\ \mu\text{m}$) the projection scale is **$0.13597\ \text{mm/pixel}$**
 (medium 30.0 mm nail = 220.6 px). The sensor dimensions are consistent with the
-pixel pitch ($6.773 / 2472 = 5.650 / 2062 = 2.74\ \mu\text{m}$). An empirical
-override measured from a known reference is available via
-`src.calibration.calculate_scale` and can be set on `CalibrationConfig`.
+pixel pitch ($6.773 / 2472 = 5.650 / 2062 = 2.74\ \mu\text{m}$). Set
+`CalibrationConfig.mm_per_pixel` explicitly to override the projection scale with
+an empirical value measured from a known reference.
 
 ---
 
@@ -181,7 +181,16 @@ Interactive keyboard controls in the OpenCV window:
 - `s`: Save the current raw frame snapshot to `data/samples/`.
 - `m`: Toggle measurement overlay on/off dynamically.
 - `e`: Run auto exposure + gain once on the current scene.
+- `a`: Toggle auto exposure on/off.
+- `[` / `]`: Decrease / increase exposure manually.
+- `-` / `=`: Decrease / increase gain manually.
 - `w`: Run auto white balance once on the current scene.
+- `g`: Cycle the ground-truth preset (or type a value and press Enter).
+- `c`: Cycle the illumination-condition label.
+- `TAB` / `n`: Select the next detected nail as the reference (highlighted magenta).
+- `r`: Record the current measurement into the accuracy table.
+
+On exit, a per-condition accuracy summary (mean absolute / relative error) is printed and the trials are saved to `data/results/live_measurements.csv`. See [`docs/run-live-camera.md`](docs/run-live-camera.md) §6.
 
 Exposure / white balance options:
 - `--auto-exposure off|once|continuous` and `--auto-gain off|once|continuous` (default `continuous`).
@@ -221,14 +230,16 @@ object-measurement-vision-system/
 ├── src/
 │   ├── __init__.py           # Lazy package exports
 │   ├── camera_interface.py   # AravisCamera (Aravis 0.8, white balance) & FileFrameSource
-│   ├── projection.py         # Pinhole projection & sensor mm -> px (docs/projection-note.md)
+│   ├── projection.py         # Projection-derived mm-per-pixel scale (docs/projection-note.md)
 │   ├── segmentation.py       # Grayscale, blur, Otsu threshold, morphology, contour selection
 │   ├── measurement.py        # cv2.minAreaRect geometry, length_px, caliper endpoints, angle
-│   ├── calibration.py        # PixelCalibration & projection/empirical scaling math
+│   ├── calibration.py        # Pixel-to-mm conversion (projection or explicit override)
 │   ├── pipeline.py           # Standard pipeline orchestrator returning MeasurementResult
+│   ├── live_view.py          # Camera-agnostic live view (display loop, overlay, controls, accuracy logging)
+│   ├── accuracy_log.py       # Live accuracy trials + per-condition summary table
 │   └── visualization.py      # HUD overlay, contour drawing, caliper line, bounding box
 ├── scripts/
-│   ├── run_live_camera.py    # Live streaming, keyboard shortcuts, white balance, measurement toggle
+│   ├── run_live_camera.py    # Camera launcher: Aravis settings + starts the live view
 │   ├── run_measurement.py    # CLI single-image measurement
 │   ├── evaluate_dataset.py   # Benchmark evaluation script writing to measurements.csv
 │   └── generate_synthetic_data.py # Synthetic image generator for offline unit testing
@@ -241,7 +252,8 @@ object-measurement-vision-system/
 ├── conftest.py               # Adds project root to sys.path for tests
 ├── data/
 │   ├── results/
-│   │   └── measurements.csv  # Required measurement accuracy log
+│   │   ├── measurements.csv        # Required measurement accuracy log
+│   │   └── live_measurements.csv   # Recorded live-demo accuracy trials
 │   └── samples/              # Saved snapshots from live camera
 ├── docs/
 │   ├── refactor-spec.md      # Refactor specification

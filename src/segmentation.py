@@ -58,6 +58,7 @@ def segment_nails(
     invert: bool = default_config.segmentation.invert_threshold,
     block_size: int = default_config.segmentation.adaptive_block_size,
     c: float = default_config.segmentation.adaptive_c,
+    morphology_kernel_size: int = default_config.segmentation.morphology_kernel_size,
     min_area: float = default_config.segmentation.min_object_area_px,
     max_area_fraction: float = default_config.segmentation.max_object_area_fraction,
     max_extent_fraction: float = default_config.segmentation.max_object_extent_fraction,
@@ -74,31 +75,27 @@ def segment_nails(
     gray = to_grayscale(image)
 
     # 1. Gaussian blur to suppress sensor noise
-    if blur_kernel > 1:
-        if blur_kernel % 2 == 0:
-            blur_kernel += 1
-        blurred = cv2.GaussianBlur(gray, (blur_kernel, blur_kernel), 0)
-    else:
-        blurred = gray
+    blurred = cv2.GaussianBlur(gray, (blur_kernel, blur_kernel), 0)
 
     # 2. Thresholding (adaptive local threshold or global Otsu)
     mask = _threshold(blurred, method, invert, block_size, c)
 
-    # 3. Small morphological opening to remove isolated noise speckles
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    # 3. Small morphological opening to remove isolated noise
+    kernel_size = max(1, morphology_kernel_size)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size, kernel_size))
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
 
     # 4. Contour extraction
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # 5. Object selection: keep valid contours, reject tiny noise and whole-frame fills
+    # 5. Object selection: keep valid contours, reject tiny noise, whole-frame
     frame_h, frame_w = image.shape[0], image.shape[1]
     total_area = float(frame_h * frame_w)
     max_area = max_area_fraction * total_area
     max_w = max_extent_fraction * frame_w
     max_h = max_extent_fraction * frame_h
 
-    def _plausible(c: np.ndarray) -> bool:
+    def _filter(c: np.ndarray) -> bool:
         area = cv2.contourArea(c)
         if not (min_area <= area <= max_area):
             return False
@@ -106,7 +103,7 @@ def segment_nails(
         _, _, w, h = cv2.boundingRect(c)
         return w <= max_w and h <= max_h
 
-    valid_contours = [c for c in contours if _plausible(c)]
+    valid_contours = [c for c in contours if _filter(c)]
     if not valid_contours:
         raise ValueError(f"No object detected with area between {min_area} and {max_area} pixels.")
 
@@ -121,6 +118,7 @@ def segment_nail(
     invert: bool = default_config.segmentation.invert_threshold,
     block_size: int = default_config.segmentation.adaptive_block_size,
     c: float = default_config.segmentation.adaptive_c,
+    morphology_kernel_size: int = default_config.segmentation.morphology_kernel_size,
     min_area: float = default_config.segmentation.min_object_area_px,
     max_area_fraction: float = default_config.segmentation.max_object_area_fraction,
     max_extent_fraction: float = default_config.segmentation.max_object_extent_fraction,
@@ -136,6 +134,7 @@ def segment_nail(
         invert=invert,
         block_size=block_size,
         c=c,
+        morphology_kernel_size=morphology_kernel_size,
         min_area=min_area,
         max_area_fraction=max_area_fraction,
         max_extent_fraction=max_extent_fraction,

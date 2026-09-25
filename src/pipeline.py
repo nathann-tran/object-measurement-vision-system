@@ -5,13 +5,14 @@ Frame -> Segmentation -> Measurement (cv2.minAreaRect) -> Calibration (px to mm)
 """
 
 from dataclasses import dataclass, field
-from typing import Optional, List
+from typing import Optional, List, Sequence
 import numpy as np
 
 from config.system_config import default_config
 from src.segmentation import segment_nail, segment_nails
 from src.measurement import NailMeasurement, measure_nail
 from src.calibration import default_mm_per_pixel, pixels_to_mm
+from src.accuracy_log import match_ground_truth
 from src.visualization import draw_measurement, draw_measurements
 
 
@@ -63,7 +64,7 @@ class MeasurementPipeline:
         self.adaptive_block_size = adaptive_block_size
         self.adaptive_c = adaptive_c
 
-    def _segment(self, image: np.ndarray):
+    def   _segment(self, image: np.ndarray):
         return segment_nails(
             image,
             method=self.threshold_method,
@@ -129,14 +130,25 @@ class MeasurementPipeline:
         image: np.ndarray,
         ground_truth_mm: Optional[float] = None,
         condition: Optional[str] = None,
+        reference_index: int = 0,
+        ground_truth_presets: Optional[Sequence[float]] = None,
     ) -> SceneResult:
         """Measure every object in the frame and render them together.
+
+        ``reference_index`` selects which object a single ``ground_truth_mm``
+        refers to. Alternatively, pass ``ground_truth_presets`` to auto-match
+        each object to its nearest known length (within a tolerance).
 
         Raises:
             ValueError: If no valid object is detected.
         """
         contours, mask = self._segment(image)
         results = [self._measure(c, mask, ground_truth_mm) for c in contours]
+
+        ground_truths = None
+        if ground_truth_presets:
+            ground_truths = [match_ground_truth(r.length_mm, ground_truth_presets) for r in results]
+
         annotated = draw_measurements(
             image=image,
             contours=[r.contour for r in results],
@@ -144,5 +156,7 @@ class MeasurementPipeline:
             length_mms=[r.length_mm for r in results],
             ground_truth_mm=ground_truth_mm,
             condition=condition,
+            reference_index=reference_index,
+            ground_truths=ground_truths,
         )
         return SceneResult(measurements=results, mask=mask, annotated_image=annotated)

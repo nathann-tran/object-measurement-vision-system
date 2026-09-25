@@ -342,6 +342,35 @@ class AravisCamera:
             applied = self.enable_software_auto_gain("once") or applied
         return applied
 
+    def set_auto_exposure_enabled(self, enabled: bool) -> bool:
+        """Turn auto exposure on (continuous) or off (manual)."""
+        mode = "continuous" if enabled else "off"
+        if self._feature_available("ExposureAuto"):
+            return self.set_auto_exposure(mode)
+        return self.enable_software_auto_exposure(mode)
+
+    def nudge_exposure(self, factor: float) -> bool:
+        """Multiply the current exposure time by ``factor`` (manual override)."""
+        if self._feature_available("ExposureAuto"):
+            self.set_auto_exposure("off")
+        self._auto_exposure_mode = None
+        exposure = self._exposure_time if self._exposure_time is not None else self.get_exposure_time()
+        if exposure is None or self._exposure_bounds is None:
+            return False
+        lo, hi = self._exposure_bounds
+        return self.set_exposure_time(min(max(exposure * factor, lo), hi))
+
+    def nudge_gain(self, delta_db: float) -> bool:
+        """Add ``delta_db`` to the current gain (manual override)."""
+        if self._feature_available("GainAuto"):
+            self.set_auto_gain("off")
+        self._auto_gain_mode = None
+        gain = self._gain if self._gain is not None else self.get_gain()
+        if gain is None or self._gain_bounds is None:
+            return False
+        lo, hi = self._gain_bounds
+        return self.set_gain(min(max(gain + delta_db, lo), hi))
+
     # ------------------------------------------------------------------
     # White balance (only if the camera supports it)
     # ------------------------------------------------------------------
